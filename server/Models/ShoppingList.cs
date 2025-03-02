@@ -1,8 +1,10 @@
-namespace server.Models;
-
-public class ShoppingList
+namespace server.Models
 {
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public int OwnerId { get; set; }
+
+    public class ShoppingList
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public int OwnerId { get; set; }
+    }
 }

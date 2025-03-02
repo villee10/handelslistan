@@ -1,4 +1,4 @@
-namespace server.Models // Samma namespace som User
+namespace server.Models
 {
     public class ListItem
     {

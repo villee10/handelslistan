@@ -1,13 +1,14 @@
-
 using Microsoft.EntityFrameworkCore;
-using server.Models;
+using server.Models; 
 
-public class AppDbContext : DbContext
+namespace server.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<User> Users { get; set; }
-    public DbSet<ShoppingList> ShoppingLists { get; set; }
-    public DbSet<ListItem> ListItems { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<ShoppingList> ShoppingLists { get; set; }
+        public DbSet<ListItem> ListItems { get; set; }
+    }
 }
-
