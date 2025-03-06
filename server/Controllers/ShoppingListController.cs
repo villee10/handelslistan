@@ -1,36 +1,41 @@
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using server.Models;
+using System.Collections.Generic;
 
 namespace server.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
-    public class ShoppingListsController : ControllerBase
+    [Route("api/shoppinglist")]
+    public class ShoppingListController : ControllerBase
     {
         private readonly string _connectionString;
 
-        public ShoppingListsController(IConfiguration configuration)
+        public ShoppingListController(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
+
         }
 
-        // GET: api/ShoppingLists
-        [HttpGet]
-        public ActionResult<IEnumerable<shopping_list>> GetShoppingLists()
+        [HttpGet("{userId}")]
+        public ActionResult<IEnumerable<ShoppingList>> GetLists(int userId)
         {
-            var shoppingLists = new List<shopping_list>();
+            var lists = new List<ShoppingList>();
 
             using (var connection = new NpgsqlConnection(_connectionString))
             {
                 connection.Open();
-                using (var command = new NpgsqlCommand("SELECT id, name, owner_id FROM shopping_lists", connection))
+                using (var command = new NpgsqlCommand(
+                    "SELECT id, name, owner_id FROM shopping_lists WHERE owner_id = @userId", 
+                    connection))
                 {
+                    command.Parameters.AddWithValue("@userId", userId);
+
                     using (var reader = command.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            shoppingLists.Add(new shopping_list
+                            lists.Add(new ShoppingList
                             {
                                 Id = reader.GetInt32(0),
                                 Name = reader.GetString(1),
@@ -41,19 +46,42 @@ namespace server.Controllers
                 }
             }
 
-            return Ok(shoppingLists);
+            return Ok(lists);
         }
 
-        // GET: api/ShoppingLists/5
-        [HttpGet("{id}")]
-        public ActionResult<shopping_list> GetShoppingList(int id)
+        [HttpPost]
+        public ActionResult<ShoppingList> CreateList([FromBody] ShoppingList list)
         {
-            shopping_list shoppingList = null;
+            int newListId;
+            using (var connection = new NpgsqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = new NpgsqlCommand(
+                    "INSERT INTO shopping_lists (name, owner_id) VALUES (@name, @ownerId) RETURNING id", 
+                    connection))
+                {
+                    command.Parameters.AddWithValue("@name", list.Name);
+                    command.Parameters.AddWithValue("@ownerId", list.OwnerId);
+
+                    newListId = Convert.ToInt32(command.ExecuteScalar());
+                }
+            }
+
+            list.Id = newListId;
+            return CreatedAtAction(nameof(GetList), new { id = newListId }, list);
+        }
+
+        [HttpGet("details/{id}")]
+        public ActionResult<ShoppingList> GetList(int id)
+        {
+            ShoppingList list = null;
 
             using (var connection = new NpgsqlConnection(_connectionString))
             {
                 connection.Open();
-                using (var command = new NpgsqlCommand("SELECT id, name, owner_id FROM shopping_lists WHERE id = @id", connection))
+                using (var command = new NpgsqlCommand(
+                    "SELECT id, name, owner_id FROM shopping_lists WHERE id = @id", 
+                    connection))
                 {
                     command.Parameters.AddWithValue("@id", id);
 
@@ -61,7 +89,7 @@ namespace server.Controllers
                     {
                         if (reader.Read())
                         {
-                            shoppingList = new shopping_list
+                            list = new ShoppingList
                             {
                                 Id = reader.GetInt32(0),
                                 Name = reader.GetString(1),
@@ -72,43 +100,13 @@ namespace server.Controllers
                 }
             }
 
-            return shoppingList != null ? Ok(shoppingList) : NotFound();
+            return list != null ? Ok(list) : NotFound();
         }
 
-        // POST: api/ShoppingLists
-        [HttpPost]
-        public ActionResult<shopping_list> PostShoppingList([FromBody] shopping_list shoppingList)
-        {
-            // Kontrollera att ägaren existerar
-            if (!UserExists(shoppingList.OwnerId))
-            {
-                return BadRequest("Användaren existerar inte.");
-            }
-
-            int newListId;
-            using (var connection = new NpgsqlConnection(_connectionString))
-            {
-                connection.Open();
-                using (var command = new NpgsqlCommand(
-                    "INSERT INTO shopping_lists (name, owner_id) VALUES (@name, @owner_id) RETURNING id", 
-                    connection))
-                {
-                    command.Parameters.AddWithValue("@name", shoppingList.Name);
-                    command.Parameters.AddWithValue("@owner_id", shoppingList.OwnerId);
-
-                    newListId = Convert.ToInt32(command.ExecuteScalar());
-                }
-            }
-
-            shoppingList.Id = newListId;
-            return CreatedAtAction(nameof(GetShoppingList), new { id = newListId }, shoppingList);
-        }
-
-        // PUT: api/ShoppingLists/5
         [HttpPut("{id}")]
-        public IActionResult PutShoppingList(int id, [FromBody] shopping_list shoppingList)
+        public IActionResult UpdateList(int id, [FromBody] ShoppingList list)
         {
-            if (id != shoppingList.Id)
+            if (id != list.Id)
             {
                 return BadRequest();
             }
@@ -121,7 +119,7 @@ namespace server.Controllers
                     connection))
                 {
                     command.Parameters.AddWithValue("@id", id);
-                    command.Parameters.AddWithValue("@name", shoppingList.Name);
+                    command.Parameters.AddWithValue("@name", list.Name);
 
                     int rowsAffected = command.ExecuteNonQuery();
                     return rowsAffected > 0 ? NoContent() : NotFound();
@@ -129,45 +127,17 @@ namespace server.Controllers
             }
         }
 
-        // DELETE: api/ShoppingLists/5
         [HttpDelete("{id}")]
-        public IActionResult DeleteShoppingList(int id)
+        public IActionResult DeleteList(int id)
         {
             using (var connection = new NpgsqlConnection(_connectionString))
             {
                 connection.Open();
-                
-                // Ta först bort alla listartiklar
-                using (var deleteItemsCommand = new NpgsqlCommand(
-                    "DELETE FROM list_items WHERE list_id = @id", 
-                    connection))
+                using (var command = new NpgsqlCommand("DELETE FROM shopping_lists WHERE id = @id", connection))
                 {
-                    deleteItemsCommand.Parameters.AddWithValue("@id", id);
-                    deleteItemsCommand.ExecuteNonQuery();
-                }
-
-                // Ta sedan bort själva listan
-                using (var deleteListCommand = new NpgsqlCommand(
-                    "DELETE FROM shopping_lists WHERE id = @id", 
-                    connection))
-                {
-                    deleteListCommand.Parameters.AddWithValue("@id", id);
-                    int rowsAffected = deleteListCommand.ExecuteNonQuery();
+                    command.Parameters.AddWithValue("@id", id);
+                    int rowsAffected = command.ExecuteNonQuery();
                     return rowsAffected > 0 ? NoContent() : NotFound();
-                }
-            }
-        }
-
-        // Hjälpmetod för att kontrollera användarens existens
-        private bool UserExists(int userId)
-        {
-            using (var connection = new NpgsqlConnection(_connectionString))
-            {
-                connection.Open();
-                using (var command = new NpgsqlCommand("SELECT COUNT(*) FROM users WHERE id = @id", connection))
-                {
-                    command.Parameters.AddWithValue("@id", userId);
-                    return Convert.ToInt32(command.ExecuteScalar()) > 0;
                 }
             }
         }

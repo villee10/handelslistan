@@ -1,6 +1,6 @@
 namespace server.Models
 {
-    public class list_item
+    public class ListItem
     {
         public int Id { get; set; }
         public int ListId { get; set; }

@@ -20,9 +20,9 @@ namespace server.Controllers
 
         // GET: api/Users
         [HttpGet]
-        public ActionResult<IEnumerable<users>> GetUsers()
+        public ActionResult<IEnumerable<Users>> GetUsers()
         {
-            var usersList = new List<users>();
+            var usersList = new List<Users>();
 
             using (var connection = new NpgsqlConnection(_connectionString))
             {
@@ -33,7 +33,7 @@ namespace server.Controllers
                     {
                         while (reader.Read())
                         {
-                            usersList.Add(new users
+                            usersList.Add(new Users
                             {
                                 Id = reader.GetInt32(0),
                                 Username = reader.GetString(1),
@@ -49,7 +49,7 @@ namespace server.Controllers
 
         // POST: api/Users/register
         [HttpPost("register")]
-        public ActionResult<users> Register([FromBody] UserRegistrationDTO model)
+        public ActionResult<Users> Register([FromBody] UserRegistrationDTO model)
         {
             // Kontrollera om användarnamnet redan finns
             if (UserExistsByUsername(model.Username))
@@ -93,9 +93,9 @@ namespace server.Controllers
 
         // GET: api/Users/5
         [HttpGet("{id}")]
-        public ActionResult<users> GetUser(int id)
+        public ActionResult<Users> GetUser(int id)
         {
-            users user = null;
+            Users user = null;
 
             using (var connection = new NpgsqlConnection(_connectionString))
             {
@@ -108,7 +108,7 @@ namespace server.Controllers
                     {
                         if (reader.Read())
                         {
-                            user = new users
+                            user = new Users
                             {
                                 Id = reader.GetInt32(0),
                                 Username = reader.GetString(1),
