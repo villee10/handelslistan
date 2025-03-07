@@ -1,0 +1,11 @@
+
+
+[
+    { "id": 1, "name": "Tomato", "category": "Vegetable" },
+    { "id": 2, "name": "Chicken", "category": "Meat" },
+    { "id": 3, "name": "Salt", "category": "Spice" },
+    { "id": 4, "name": "Milk", "category": "Dairy" },
+    { "id": 5, "name": "Flour", "category": "Baking" }
+  ]
+
+  
